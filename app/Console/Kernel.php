@@ -4,6 +4,7 @@ namespace App\Console;
 
 use App\Console\Commands\ImportClosingQuotes;
 use App\Console\Commands\ImportCompanies;
+use App\Console\Commands\ImportHistoricalStocksData;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -17,6 +18,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         ImportCompanies::class,
         ImportClosingQuotes::class,
+        ImportHistoricalStocksData::class,
     ];
 
     /**
