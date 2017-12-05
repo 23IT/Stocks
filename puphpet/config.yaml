@@ -13,7 +13,7 @@ vagrantfile:
                             natdnshostresolver1: false
                         showgui: 0
                     vmware:
-                        numvcpus: 1
+                        numvcpus: 2
                     parallels:
                         linked_clone: 0
                         check_guest_tools: 0
@@ -28,8 +28,8 @@ vagrantfile:
                                 vflmnfp_06sryd024p07:
                                     host: '7820'
                                     guest: '22'
-                        memory: '2048'
-                        cpus: '1'
+                        memory: '4096'
+                        cpus: '2'
         provision:
             puppet:
                 manifests_path: puphpet/puppet/manifests

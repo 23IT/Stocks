@@ -15,6 +15,17 @@ class CreateIntraDayQuotesTable extends Migration
     {
         Schema::create('intra_day_quotes', function (Blueprint $table) {
             $table->increments('id');
+            $table->string('symbol');
+            $table->integer('unknown_value1');
+            $table->string('date_stamp');
+            $table->string('time_stamp');
+            $table->dateTime('datetime_quote');
+            $table->float('open');
+            $table->float('high');
+            $table->float('low');
+            $table->float('close');
+            $table->integer('volumes');
+            $table->integer('unknown_value2');
             $table->timestamps();
         });
     }
