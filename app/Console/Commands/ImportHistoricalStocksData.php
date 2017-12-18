@@ -2,9 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Company;
-use App\IntraDayQuote;
-use Faker\Provider\DateTime;
+use App\Jobs\ImportPrnFileData;
 use Illuminate\Console\Command;
 
 class ImportHistoricalStocksData extends Command
@@ -28,7 +26,14 @@ class ImportHistoricalStocksData extends Command
      *
      * @var string
      */
-    protected $url = 'http://bossa.pl/pub/intraday/mstock/cgl/';
+    protected $url = 'http://bossa.pl/pub/metastock/mstock/sesjaall/';
+
+    /**
+     * The path to store the downloaded data
+     *
+     * @var string
+     */
+    protected $downloadPath = '/var/www/stocks_archives/';
 
     /**
      * Create a new command instance.
@@ -48,92 +53,86 @@ class ImportHistoricalStocksData extends Command
     public function handle()
     {
 
-        $previousWorkDay = new \DateTime('@' . strtotime('today -1 Weekday'));
-
-        $companies = Company::where('date_to', '>=', $previousWorkDay)->get();
-
-        $companyCount = count($companies);
-
-        if ($companyCount == 0) {
-            $this->error('There are no Company records in the database. Please run the stocks:import-companies command.');
-            exit();
-        }
-
         $directory = file_get_contents($this->url);
 
-        preg_match_all("<a href=\x22(.+?)\x22>", $directory, $files);
+        preg_match_all("<a href=\x22(.+?zip)\x22>", $directory, $files);
+        preg_match_all("/(.+?zip).*(([12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]) (\d{2}:\d{2})))/", $directory, $dates);
 
-        $files = $files[1];
-        array_shift($files);
+        $dates = array_reverse($dates[2], false);
 
-        $downloads = [];
+        $files = array_reverse($files[1], false);
 
-        foreach ($files as $filename) {
-            $symbol = strtoupper(substr($filename,0, -4));
-            $downloads[$symbol] = $filename;
-        }
+        for ($i=0 ; $i < count($files) ; $i++) {
+            $filename = $this->downloadPath . $files[$i];
+            $modified = date_create_from_format('Y-m-d H:i', $dates[$i]);
 
-        foreach ($companies as $company) {
+            if ((file_exists($filename) &&  date_create(filemtime($filename)) < $modified) ||  !file_exists($filename)) {
 
-            if (!array_key_exists($company->symbol, $downloads)) {
-                $this->warn("Could not find a file corresponding to the following symbol: $company->symbol");
-                $this->warn("The stock was monitored from {$company->date_from->format('Y-m-d')} to {$company->date_to->format('Y-m-d')}\n");
-                continue;
-            }
+                $this->info("FILE $filename NOT FOUND LOCALLY, DOWNLOADING...\n");
 
-            $this->info("Downloading {$downloads[$company->symbol]}...");
+                $source = $this->url . $files[$i];
 
-            $source = $this->url . $downloads[$company->symbol];
-            $destination = '/tmp/' . $downloads[$company->symbol];
+                $this->downloadFile($source, $filename);
 
-            if (!copy($source, $destination)) {
-                $errors = error_get_last();
-                $this->error('File copy error: ' . $errors['type']);
-                $this->error($errors['message']);
-                dump($errors);
-                exit();
             } else {
-                $this->info('Complete!');
+                $this->info("FILE $filename EXISTS, USING LOCAL COPY...\n");
             }
-
-            $extractPath = '/tmp/stocks_extracted/';
-            $filePath = $extractPath . substr($downloads[$company->symbol], 0, -3) . 'prn';
-
-            $this->info("Extracting archive \"$destination\" to \"$extractPath\"...");
-
-            $archive = new \ZipArchive();
-            $archive->open($destination);
-            $archive->extractTo($extractPath);
-
-            $this->info("Done!");
-
-            $data = file($filePath);
-
-            $dataBar = $this->output->createProgressBar(count($data));
-            $dataBar->setMessage("Importing $company->symbol...");
-
-            foreach ($data as $row) {
-
-                $line = explode(',', $row);
-
-                $quote = new IntraDayQuote([
-                    'symbol' => $line[0],
-                    'unknown_value1' => $line[1],
-                    'date_stamp' => $line[2],
-                    'time_stamp' => $line[3],
-                    'datetime_quote' => date_create_from_format('Ymd His', $line[2] . ' ' . $line[3]),
-                    'open' => $line[4],
-                    'high' => $line[5],
-                    'low' => $line[6],
-                    'close' => $line[7],
-                    'volumes' => $line[8],
-                    'unknown_value2' => $line[9]
-                ]);
-                $quote->save();
-                $dataBar->advance();
-            }
-            $dataBar->finish();
 
         }
+
+        $cnt = $this->importDirectory($this->downloadPath);
+
+        $this->info("Successfully created $cnt import jobs\n");
+    }
+
+    protected function downloadFile($source, $destination)
+    {
+        if (!copy($source, $destination)) {
+            $errors = error_get_last();
+            $this->error('File copy error: ' . $errors['type']);
+            $this->error($errors['message']);
+            dump($errors);
+            exit();
+        } else {
+            $this->info('Complete!');
+        }
+
+        return true;
+    }
+
+    protected function unzipFile($path)
+    {
+        $destination = substr($path, 0, -4);
+        $archive = new \ZipArchive();
+        $archive->open($path);
+        $archive->extractTo($destination);
+
+        return $destination;
+    }
+
+    protected function importDirectory($directory)
+    {
+        $count = 0;
+        $files = array_slice(scandir($directory), 2);
+
+        foreach ($files as $file) {
+            $filepath = $directory . DIRECTORY_SEPARATOR . $file;
+
+            if (is_dir($filepath)) {
+                $count += $this->importDirectory($filepath);
+            }
+
+            if (is_file($filepath) && stristr($file, '.zip')) {
+                $unzipped = $this->unzipFile($filepath);
+                $count += $this->importDirectory($unzipped);
+            }
+
+            if (is_file($filepath) && stristr($file, '.prn')) {
+                dispatch(new ImportPrnFileData($filepath));
+                $count++;
+
+            }
+        }
+        return $count;
     }
 }
