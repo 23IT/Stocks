@@ -5,6 +5,7 @@
 /vendor
 /.idea
 /.vagrant
+/stocks_archives
 Homestead.json
 Homestead.yaml
 .env

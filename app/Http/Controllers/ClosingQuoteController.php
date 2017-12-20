@@ -7,79 +7,48 @@ use Illuminate\Http\Request;
 
 class ClosingQuoteController extends Controller
 {
+
+    protected $limit = 50;
+
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return array
      */
-    public function index()
+    public function index($page = 1)
     {
-        //
-    }
+        $sword = \request()->has('sword') ? \request()->get('sword') : false;
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
+        $query = ClosingQuote::offset(($page-1) * $this->limit)
+            ->limit($this->limit)
+            ->orderBy('date_quote', 'desc');
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        //
+        if ($sword) {
+            $query->where('symbol', 'like', "%$sword%");
+        }
+
+        return [
+            'results' => $query
+                ->get()
+                ->toArray(),
+            'error' => \request()->toArray(),
+            'page' => $page
+        ];
     }
 
     /**
      * Display the specified resource.
      *
-     * @param  \App\ClosingQuote  $closingQuote
-     * @return \Illuminate\Http\Response
+     * @param  string $symbol
+     * @return array
      */
-    public function show(ClosingQuote $closingQuote)
+    public function show($symbol, $page = 1)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\ClosingQuote  $closingQuote
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(ClosingQuote $closingQuote)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\ClosingQuote  $closingQuote
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, ClosingQuote $closingQuote)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\ClosingQuote  $closingQuote
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(ClosingQuote $closingQuote)
-    {
-        //
+        return ClosingQuote::offset(($page-1) * $this->limit)
+            ->where('symbol', $symbol)
+            ->orderBy('date_quote', 'desc')
+            ->limit($this->limit)
+            ->get()
+            ->toArray();
     }
 }

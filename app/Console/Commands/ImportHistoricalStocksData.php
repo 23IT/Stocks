@@ -33,7 +33,7 @@ class ImportHistoricalStocksData extends Command
      *
      * @var string
      */
-    protected $downloadPath = '/var/www/stocks_archives/';
+    protected $downloadPath = 'stocks_archives/';
 
     /**
      * Create a new command instance.

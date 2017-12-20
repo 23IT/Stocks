@@ -14,3 +14,6 @@
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/daily/{page?}', 'ClosingQuoteController@index');
+Route::get('/daily/for/{symbol}/{page?}', 'ClosingQuoteController@show');
