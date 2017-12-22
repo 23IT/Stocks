@@ -52,7 +52,6 @@ class ImportPrnFileData implements ShouldQueue
             }
 
         } catch (\Exception $e) {
-            dump($line);
             dump($e);
         }
     }
