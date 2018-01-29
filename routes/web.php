@@ -17,3 +17,4 @@ Route::get('/', function () {
 
 Route::get('/daily/{page?}', 'ClosingQuoteController@index');
 Route::get('/daily/for/{symbol}/{page?}', 'ClosingQuoteController@show');
+Route::get('/companies/{page?}{limit?}', 'CompanyController@index');

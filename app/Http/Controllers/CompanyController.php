@@ -12,9 +12,23 @@ class CompanyController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index($page = 0, $limit = 0)
     {
-        //
+        $query = Company::query();
+
+        if ($page > 0 && $limit > 0) {
+            $query->offset(($page-1) * $this->limit)->limit($this->limit);
+        }
+        
+        $query->orderBy('created_at', 'asc');
+
+        return [
+            'results' => $query
+                ->get()
+                ->toArray(),
+            'error' => \request()->toArray(),
+            'page' => $page
+        ];
     }
 
     /**
